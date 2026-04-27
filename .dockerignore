@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Build / cache
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+
+# Repo
+.git/
+.gitignore
+.github/
+
+# Docs / dev that don't belong in the image
+tests/
+deploy/
+docker-compose.yml
+*.md
+!README.md
+
+# Secrets / local state
+.env
+*.log
+audit.log
+.secrets.baseline
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
