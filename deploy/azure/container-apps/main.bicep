@@ -107,13 +107,13 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         ],
         empty(registryPassword)
           ? []
-          : [ { name: 'registry-password', value: registryPassword } ]
+          : [ { name: 'registry-password', value: registryPassword } ]  // pragma: allowlist secret -- secret *name*, not value
       )
       registries: empty(registryServer) ? [] : [
         {
           server: registryServer
           username: registryUsername
-          passwordSecretRef: 'registry-password'
+          passwordSecretRef: 'registry-password'  // pragma: allowlist secret -- secretRef name
         }
       ]
     }
@@ -127,8 +127,8 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             memory: '1Gi'
           }
           env: [
-            { name: 'TGMGMT_BOT_TOKEN', secretRef: 'bot-token' }
-            { name: 'TGMGMT_REDIS_URL', secretRef: 'redis-url' }
+            { name: 'TGMGMT_BOT_TOKEN', secretRef: 'bot-token' }   // pragma: allowlist secret -- secretRef name
+            { name: 'TGMGMT_REDIS_URL', secretRef: 'redis-url' }   // pragma: allowlist secret -- secretRef name
             { name: 'TGMGMT_TRUSTED_BOT_IDS', value: trustedBotIds }
             { name: 'TGMGMT_ALLOWED_CHAT_IDS', value: allowedChatIds }
             { name: 'TGMGMT_LOG_LEVEL', value: 'INFO' }
