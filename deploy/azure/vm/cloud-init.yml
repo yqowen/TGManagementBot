@@ -1,0 +1,79 @@
+#cloud-config
+# Azure VM cloud-init for TGManagementBot.
+# Provisions Docker + clones repo + runs docker compose with .env from
+# CustomData substitutions. Designed for Ubuntu 22.04 / 24.04 LTS.
+#
+# Render this file with envsubst before passing to `az vm create --custom-data`:
+#   TGMGMT_BOT_TOKEN=... TGMGMT_TRUSTED_BOT_IDS=... \
+#   envsubst < cloud-init.yml > /tmp/cloud-init.rendered.yml
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+
+write_files:
+  - path: /root/.ssh/tgmgmt_deploy_key
+    permissions: "0600"
+    owner: root:root
+    content: |
+${DEPLOY_KEY_INDENTED}
+
+  - path: /root/.ssh/config
+    permissions: "0600"
+    owner: root:root
+    content: |
+      Host github.com
+        HostName github.com
+        User git
+        IdentityFile /root/.ssh/tgmgmt_deploy_key
+        StrictHostKeyChecking accept-new
+
+  - path: /opt/tgmgmt/.env
+    permissions: "0600"
+    owner: root:root
+    content: |
+      TGMGMT_BOT_TOKEN=${TGMGMT_BOT_TOKEN}
+      TGMGMT_REDIS_URL=redis://redis:6379/0
+      TGMGMT_TRUSTED_BOT_IDS=${TGMGMT_TRUSTED_BOT_IDS}
+      TGMGMT_ALLOWED_CHAT_IDS=${TGMGMT_ALLOWED_CHAT_IDS}
+      TGMGMT_LOG_LEVEL=INFO
+
+  - path: /etc/systemd/system/tgmgmt.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=TGManagementBot (docker compose)
+      Requires=docker.service
+      After=docker.service network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      WorkingDirectory=/opt/tgmgmt/repo
+      ExecStart=/usr/bin/docker compose --env-file /opt/tgmgmt/.env up -d --build
+      ExecStop=/usr/bin/docker compose down
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  # Install Docker Engine + compose plugin
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - >-
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc]
+    https://download.docker.com/linux/ubuntu $(. /etc/os-release; echo "$VERSION_CODENAME") stable"
+    | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  # Pull source. Supports both HTTPS (public) and git@github.com (private + deploy key).
+  - git clone ${REPO_URL:-https://github.com/yourname/TGManagementBot.git} /opt/tgmgmt/repo
+  - systemctl daemon-reload
+  - systemctl enable --now tgmgmt.service
