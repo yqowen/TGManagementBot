@@ -27,12 +27,31 @@ set -euo pipefail
 VM_NAME="tgmgmt-vm"
 VM_SIZE="${AZ_VM_SIZE:-Standard_B1s}"
 ADMIN_USER="${AZ_ADMIN_USER:-azureuser}"
+
+# Default SSH key: respect AZ_SSH_*KEY env vars; otherwise pick the first
+# common key type that exists on this machine (ed25519 > rsa > ecdsa).
+if [[ -z "${AZ_SSH_PUBKEY:-}" ]]; then
+  for k in id_ed25519 id_rsa id_ecdsa; do
+    if [[ -f "$HOME/.ssh/$k.pub" && -f "$HOME/.ssh/$k" ]]; then
+      AZ_SSH_PUBKEY="$HOME/.ssh/$k.pub"
+      AZ_SSH_PRIVKEY="${AZ_SSH_PRIVKEY:-$HOME/.ssh/$k}"
+      break
+    fi
+  done
+fi
 SSH_PUBKEY="${AZ_SSH_PUBKEY:-$HOME/.ssh/id_rsa.pub}"
 SSH_PRIVKEY="${AZ_SSH_PRIVKEY:-$HOME/.ssh/id_rsa}"
 TRUSTED="${TGMGMT_TRUSTED_BOT_IDS:-}"
 CHATS="${TGMGMT_ALLOWED_CHAT_IDS:-}"
 
-[[ -f "$SSH_PUBKEY"  ]] || { echo "missing $SSH_PUBKEY"  >&2; exit 1; }
+if [[ ! -f "$SSH_PUBKEY" ]]; then
+  cat >&2 <<EOF
+No SSH key found. Generate one, e.g.:
+  ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+Then re-run this script.
+EOF
+  exit 1
+fi
 [[ -f "$SSH_PRIVKEY" ]] || { echo "missing $SSH_PRIVKEY" >&2; exit 1; }
 
 CLOUD_INIT=$(mktemp); trap 'rm -f "$CLOUD_INIT"' EXIT
