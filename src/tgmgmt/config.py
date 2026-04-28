@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     # --- Misc ------------------------------------------------------------
     log_level: str = "INFO"
-    audit_log_file: str = "./audit.log"
+    audit_log_file: str = "/var/log/tgmgmt/audit.log"
 
     trusted_bot_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)
     allowed_chat_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)

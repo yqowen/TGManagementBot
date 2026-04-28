@@ -123,10 +123,13 @@ services:
     env_file: /opt/tgmgmt/.env
     environment:
       TGMGMT_REDIS_URL: redis://redis:6379/0
+    volumes:
+      - audit-data:/var/log/tgmgmt
     depends_on: [redis]
     restart: unless-stopped
 volumes:
   redis-data:
+  audit-data:
 COMPOSE
 )
 
@@ -139,6 +142,11 @@ TGMGMT_ALLOWED_CHAT_IDS=${CHATS}
 TGMGMT_LOG_LEVEL=INFO
 EOF
 ssh -i "$SSH_PRIVKEY" "${ADMIN_USER}@${VM_IP}" 'sudo chmod 600 /opt/tgmgmt/.env'
+
+echo ">> Ensuring audit-data volume is writable by container user (uid 1000)"
+ssh -i "$SSH_PRIVKEY" "${ADMIN_USER}@${VM_IP}" \
+    "cd /opt/tgmgmt && sudo docker compose -f compose.yml run --rm --user 0 \
+     --entrypoint sh bot -c 'mkdir -p /var/log/tgmgmt && chown -R 1000:1000 /var/log/tgmgmt' || true"
 
 echo ">> Pulling & starting"
 ssh -i "$SSH_PRIVKEY" "${ADMIN_USER}@${VM_IP}" \

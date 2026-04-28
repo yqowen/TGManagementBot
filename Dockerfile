@@ -25,5 +25,9 @@ WORKDIR /app
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app/src /app/src
 
+# Writable audit-log dir owned by the runtime user.
+RUN mkdir -p /var/log/tgmgmt && chown -R 1000:1000 /var/log/tgmgmt
+ENV TGMGMT_AUDIT_LOG_FILE=/var/log/tgmgmt/audit.log
+
 USER 1000:1000
 CMD ["tgmgmt"]
