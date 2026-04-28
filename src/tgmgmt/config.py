@@ -5,8 +5,10 @@ without code changes. Values are validated on startup.
 """
 from __future__ import annotations
 
+from typing import Annotated
+
 from pydantic import Field, NonNegativeFloat, PositiveFloat, PositiveInt, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -48,8 +50,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     audit_log_file: str = "./audit.log"
 
-    trusted_bot_ids: list[int] = Field(default_factory=list)
-    allowed_chat_ids: list[int] = Field(default_factory=list)
+    trusted_bot_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)
+    allowed_chat_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)
 
     # Hard ceiling we never let go above to protect ourselves regardless of config
     abs_max_outbound_rps: NonNegativeFloat = 30.0
